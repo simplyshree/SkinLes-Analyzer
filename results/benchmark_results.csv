@@ -1,0 +1,3 @@
+dataset,source,method,n_samples,mean_iou,std_iou,median_iou,mean_dice,std_dice,median_dice
+synthetic_smoke_fixture,executed regression smoke test,Otsu,8,0.9984020016805408,0.001317013488917626,0.9987670011018288,0.9991999268990399,0.0006601050332364659,0.999383104505599
+synthetic_smoke_fixture,executed regression smoke test,K-means + Morphology,8,0.9988711396710952,0.0012093666565744716,0.9990233056022529,0.9994348846062221,0.0006057074902066224,0.9995113552377307

@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+
+# Dataset and generated caches
+data/
+dataset_cache/
+*.zip
+*.tar.gz
+
+# Generated model artifacts can be large; keep the README and reproduce them.
+model/*.keras
+model/*.h5
+
+# Generated figures and local outputs
+results/figures/*.png
+results/figures/*.jpg
+results/figures/*.jpeg
+logs/
+
