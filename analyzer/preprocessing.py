@@ -11,6 +11,8 @@ import numpy as np
 def ensure_rgb(image: np.ndarray, input_color_space: str = "RGB") -> np.ndarray:
     """Return a uint8 RGB image, accepting grayscale, RGB, or BGR arrays."""
     array = np.asarray(image)
+    if array.size == 0:
+        raise ValueError("Image cannot be empty")
     if array.ndim == 2:
         array = cv2.cvtColor(array.astype(np.uint8), cv2.COLOR_GRAY2RGB)
     if array.ndim != 3 or array.shape[2] not in (3, 4):
@@ -30,6 +32,8 @@ def resize_image(image: np.ndarray, size: tuple[int, int] = (256, 256)) -> np.nd
     """Resize to (height, width) while keeping an explicit interpolation rule."""
     rgb = ensure_rgb(image)
     height, width = size
+    if len(size) != 2 or height <= 0 or width <= 0:
+        raise ValueError("size must contain two positive integers: (height, width)")
     return cv2.resize(rgb, (width, height), interpolation=cv2.INTER_AREA)
 
 
@@ -65,6 +69,8 @@ def convert_color_space(image: np.ndarray, color_space: str) -> np.ndarray:
 
 def apply_clahe(image: np.ndarray, clip_limit: float = 2.0, tile_grid_size: tuple[int, int] = (8, 8)) -> np.ndarray:
     """Enhance local contrast in the luminance channel without changing hue."""
+    if clip_limit <= 0 or len(tile_grid_size) != 2 or min(tile_grid_size) <= 0:
+        raise ValueError("clip_limit and tile_grid_size must be positive")
     rgb = ensure_rgb(image)
     lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
     clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
@@ -74,6 +80,8 @@ def apply_clahe(image: np.ndarray, clip_limit: float = 2.0, tile_grid_size: tupl
 
 def remove_hair_artifacts(image: np.ndarray, kernel_size: int = 17, inpaint_radius: int = 3) -> tuple[np.ndarray, np.ndarray]:
     """Use black-hat morphology to detect dark hair-like structures, then inpaint."""
+    if kernel_size <= 0 or kernel_size % 2 == 0 or inpaint_radius <= 0:
+        raise ValueError("kernel_size must be positive odd and inpaint_radius must be positive")
     rgb = ensure_rgb(image)
     gray = to_grayscale(rgb)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))

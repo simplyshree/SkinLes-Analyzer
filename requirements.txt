@@ -7,9 +7,13 @@ scikit-learn>=1.4,<2
 Pillow>=10,<12
 streamlit>=1.35,<2
 requests>=2.31,<3
+kaggle>=1.6,<2
+kagglehub>=0.3,<1
+datasets>=2.18,<4
+jupyter>=1.0,<2
 pytest>=8,<9
 
-# Optional training/inference dependency. Install this in a Python 3.10-3.12
-# environment when running the U-Net notebook or loading a .keras artifact.
-tensorflow>=2.16,<2.19
-
+# Optional training/inference dependency. Install it in a Python version
+# supported by the available TensorFlow wheel when running the U-Net notebook,
+# offline trainer, or saved-model inference.
+tensorflow>=2.16,<3

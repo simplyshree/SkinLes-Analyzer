@@ -1,132 +1,215 @@
-# Skin Lesion Segmentation and ABCD Analysis
+# Skin Lesion Analyzer
 
-An educational computer-vision project that compares three segmentation approaches on ISIC 2018 Task 1 lesion-boundary data:
+An educational image-processing system for segmenting dermoscopic skin-lesion images and extracting mask-based visual descriptors. The project compares classical computer-vision methods with a compact U-Net and exposes the result through a presentation-ready Streamlit application.
 
-1. Otsu thresholding
-2. K-means clustering with morphological cleanup
-3. A compact U-Net with a Dice + binary-cross-entropy loss
+> This project is not a medical device. It does not diagnose skin disease, estimate cancer risk, or replace clinical review.
 
-The selected segmentation mask is then used for image-based A/B/C/D measurements. These measurements are descriptive image features only; they are not medical diagnoses or clinical decision support.
+## What the project demonstrates
 
-## Workflow
+- Image standardisation, colour-space conversion, contrast enhancement, and optional hair-artifact removal.
+- Classical segmentation with Otsu thresholding and K-means clustering.
+- Morphological opening, closing, hole filling, polarity selection, and connected-component filtering.
+- A compact U-Net trained offline on expert masks.
+- Reproducible train/validation/test splitting and held-out evaluation.
+- Dice and IoU comparison with mean, standard deviation, median, and per-sample metrics.
+- ABCD-style image descriptors derived from the predicted mask.
+- A Streamlit frontend for interactive inference and presentation.
 
-```text
-ISIC 2018 Task 1
-        ↓
-Preprocessing
-        ↓
-Otsu / K-means / U-Net
-        ↓
-Dice + IoU comparison
-        ↓
-Best measured method
-        ↓
-ABCD image features
-        ↓
-Streamlit application
-```
-
-## Repository layout
+## System workflow
 
 ```text
-skin-lesion-analyzer/
-├── app.py
-├── analyzer/
-│   ├── abcd_features.py
-│   ├── classical_segmentation.py
-│   ├── data_loader.py
-│   ├── metrics.py
-│   ├── pipeline.py
-│   ├── preprocessing.py
-│   ├── unet_segmentation.py
-│   └── visualization.py
-├── model/README.md
-├── notebooks/skin_lesion_experiments.ipynb
-├── results/benchmark_results.csv
-├── results/README.md
-├── scripts/run_benchmark.py
-├── scripts/run_smoke_benchmark.py
-└── tests/
+Official ISIC image + expert mask archives
+                 │
+                 ▼
+       Cache, hash, extract, pair, validate
+                 │
+                 ▼
+ Resize → RGB/LAB/HSV views → optional hair removal/CLAHE
+                 │
+       ┌─────────┼─────────┐
+       ▼         ▼         ▼
+     Otsu   K-means     U-Net
+       └─────────┼─────────┘
+                 ▼
+ Morphological cleanup and binary mask validation
+                 │
+                 ▼
+ Dice/IoU benchmark + comparison figures + reports
+                 │
+                 ▼
+ Streamlit upload → live inference → mask/overlay/descriptors
 ```
+
+## Image-processing theory
+
+### Input and preprocessing
+
+Every image is converted to RGB, checked for a valid shape, and resized to 256×256. Resizing gives every algorithm a consistent input while preserving the original upload for display. RGB is convenient for display, but segmentation can use grayscale or perceptual colour spaces.
+
+- **RGB:** direct red, green, and blue intensities. Useful for display and colour statistics.
+- **Grayscale:** a single luminance-like channel used by Otsu thresholding.
+- **HSV:** separates hue, saturation, and value; useful when brightness and colourfulness should be reasoned about separately.
+- **LAB:** separates lightness from opponent colour channels and is used by the K-means baseline because Euclidean colour distance is more meaningful than raw RGB distance for many images.
+
+Optional preprocessing includes CLAHE, which improves local luminance contrast, and black-hat morphology plus inpainting for dark hair-like structures. These operations are not guaranteed to improve every image, so they are explicit UI options.
+
+### Otsu thresholding
+
+Otsu’s method searches for a grayscale threshold that best separates two intensity populations by maximising between-class variance. The binary result has no learned parameters, so it is fast and transparent. The implementation evaluates foreground polarity, retains a plausible connected component, and applies morphology to reduce isolated noise.
+
+Otsu is sensitive to uneven illumination, low lesion/background contrast, rulers, hairs, and images whose histogram is not naturally bimodal.
+
+### K-means segmentation
+
+K-means assigns each pixel to one of `k` clusters by alternating between assigning points to the nearest centroid and updating each centroid. This project uses LAB pixels with a fixed seed and normally `k=2`. Candidate clusters are scored using simple geometry safeguards before morphological cleanup.
+
+K-means does not understand lesion shape or anatomy. Its result can change when colour distributions overlap or when the background contains strong visual structure.
+
+### Morphological cleanup
+
+Morphology operates on binary masks with a structuring element:
+
+- **Opening** removes small isolated foreground regions.
+- **Closing** fills narrow gaps and joins nearby foreground regions.
+- **Hole filling** repairs enclosed background regions.
+- **Connected components** allow the pipeline to keep the most plausible lesion region.
+
+These operations improve presentation quality but can also remove real small structures. They are therefore kept deterministic and tested independently.
+
+### U-Net segmentation
+
+U-Net is an encoder-decoder convolutional network. The encoder reduces spatial resolution while learning increasingly rich features. The decoder upsamples those features to recover pixel-level boundaries. Skip connections copy high-resolution encoder features into the decoder, helping preserve lesion edges.
+
+The model predicts a probability for every pixel. Training uses a combined binary-cross-entropy and Dice-style objective:
+
+```text
+loss = binary_cross_entropy + (1 - dice)
+```
+
+Training is offline through `scripts/train_unet.py` or the notebook. The Streamlit app never starts training; it only loads an existing checkpoint and performs inference.
+
+### Evaluation metrics
+
+For binary masks:
+
+```text
+IoU   = intersection / union
+Dice  = 2 × intersection / (predicted foreground + true foreground)
+```
+
+Both metrics are calculated per test image and then summarised with mean, standard deviation, and median. All methods in one benchmark use exactly the same held-out test pairs.
+
+### ABCD-style image descriptors
+
+The selected mask drives four educational descriptors:
+
+- **A — Asymmetry:** disagreement between a lesion mask and mirrored versions around its bounding box.
+- **B — Border:** area, perimeter, circularity, and a border-irregularity proxy.
+- **C — Colour:** masked RGB mean, RGB standard deviation, colour variation, and compact dominant-colour clusters.
+- **D — Diameter:** maximum axis-aligned extent in pixels.
+
+These are image descriptors only. They are not validated clinical ABCD criteria. Diameter is not converted to millimetres because the images have no physical calibration metadata.
 
 ## Dataset
 
-The project targets **ISIC 2018 Task 1: Lesion Boundary Segmentation**. The loader uses the official challenge archive URLs and stores downloaded archives outside Git in a user-selected cache directory. It verifies that each image stem has exactly one corresponding expert mask before evaluation.
+The default `official_isic` route uses the practical official Task 1 bundle containing 900 JPEG images and 900 binary masks. It is cached in `dataset_cache/`, verified with archive hashes, and checked for exact image/mask pairing. The larger ISIC 2018/KaggleHub route remains optional.
 
-The training and validation archives are large. Start with a small subset in Colab or use `--num-samples` in the benchmark script; do not commit the dataset to this repository.
+The dataset, archives, cache metadata, and trained model are ignored by Git. Do not commit patient images or large model binaries.
 
 ## Installation
 
-Use Python 3.10–3.12 for the broadest TensorFlow compatibility:
+PowerShell:
 
-```bash
+```powershell
+cd "C:\Users\Sgoff\MYfile\Desktop\PYThh\Skin - Les Analyzer"
 python -m venv .venv
-# macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-TensorFlow is optional for classical segmentation and the Streamlit app. It is required to train or load the U-Net model.
+TensorFlow is needed for U-Net training or inference. Classical methods and most tests do not need to load TensorFlow.
 
-## Colab workflow
+## Reproducible experiments
 
-Open `notebooks/skin_lesion_experiments.ipynb` in Google Colab and run cells from top to bottom. Set `NUM_SAMPLES = 20` for a smoke run, then increase it to 100, 500, or the available dataset size. The notebook:
+The supported sizes are:
 
-- downloads and caches ISIC archives automatically;
-- checks image/mask pairing before evaluation;
-- runs Otsu and K-means on the same held-out samples;
-- trains U-Net with train/validation/test splits when TensorFlow is available;
-- saves actual metrics to `results/benchmark_results.csv` and figures to `results/figures/`.
+| Mode | Purpose |
+|---|---|
+| `20` | Smoke test and fast debugging |
+| `100` | Quick validation |
+| `500` | Practical development run |
+| `all` | Main 900-pair experiment |
 
-The notebook does not invent fallback results when data or TensorFlow is unavailable; it stops with an actionable message.
+Train the U-Net offline:
 
-## Benchmark from a local cache
-
-After downloading/extracting the ISIC archives, run:
-
-```bash
-python scripts/run_benchmark.py \
-  --images-dir /path/to/ISIC2018_Task1-2_Training_Input \
-  --masks-dir /path/to/ISIC2018_Task1_Training_GroundTruth \
-  --num-samples 100
+```powershell
+python scripts\train_unet.py --source official_isic --num-samples all --epochs 25 --model-path model\unet_skin_lesion.keras
 ```
 
-Add `--model-path model/unet_skin_lesion.keras` to include a trained U-Net. The script evaluates every method on the same image/mask pairs and writes the measured table to `results/benchmark_results.csv`.
+Run the complete benchmark:
 
-## Run the app
+```powershell
+python scripts\run_benchmark.py `
+  --source official_isic `
+  --num-samples all `
+  --model-path model\unet_skin_lesion.keras
+```
 
-```bash
+The benchmark writes:
+
+- `results/benchmark_results.csv` — aggregate method metrics.
+- `results/benchmark_results_per_sample.csv` — one row per method and test image.
+- `results/split_manifest.csv` — deterministic train/validation/test membership.
+- `results/run_metadata.json` — seed, counts, methods, paths, and selected best method.
+- `results/figures/comparison_grid.png` — representative original/ground-truth/prediction panels.
+- `results/figures/metric_summary.png` — Dice and IoU comparison chart.
+
+For a faster run, replace `all` with `20`, `100`, or `500`.
+
+## Run the Streamlit frontend
+
+```powershell
 streamlit run app.py
 ```
 
-The app reads `results/benchmark_results.csv` to choose the best method by mean Dice, then mean IoU. If no valid benchmark is available, it uses Otsu as a transparent baseline. If the selected method is U-Net but the model file is absent, the app reports the condition and uses Otsu for that request rather than pretending a neural model is available.
+The frontend has three tabs:
 
-## Metrics and ABCD-style features
+1. **Analyze image:** upload an image, choose a method, view the original/preprocessed/mask/overlay panels, and download PNG/JSON artifacts.
+2. **Benchmark results:** inspect the executed method table, ranking, split counts, and charts.
+3. **How it works:** explain the processing theory and limitations during a demo or presentation.
 
-- **IoU/Jaccard:** intersection divided by union.
-- **Dice:** twice the intersection divided by predicted plus ground-truth foreground pixels.
-- **A:** normalized disagreement between a lesion mask and its horizontal/vertical mirror around the mask bounding box. Zero means exact symmetry under this image-space definition.
-- **B:** area, perimeter, circularity, and `1 - circularity` as a geometric border-irregularity proxy.
-- **C:** mean and standard deviation of lesion pixels in RGB, plus a normalized colour-variation summary and compact dominant-colour clusters.
-- **D:** maximum axis-aligned lesion extent in pixels. No millimetre conversion is attempted without calibration metadata.
+The application reads measured benchmark results. If a U-Net method is selected but its checkpoint is unavailable, the app reports the problem instead of pretending a neural prediction exists.
 
-These are not validated diagnostic criteria.
+## Tests and quality checks
 
-## Results
+```powershell
+python -m pytest -q
+python -m compileall -q analyzer scripts app.py
+```
 
-`results/benchmark_results.csv` is generated by an executed benchmark. Its `dataset` and `source` columns identify whether the run was a real ISIC evaluation or a local smoke fixture. Never replace measured values with illustrative numbers. Figures generated by the benchmark are stored in `results/figures/` and are intentionally ignored by Git unless explicitly added.
+The test suite covers pairing, deterministic splitting, preprocessing, segmentation, metrics, pipeline behaviour, model validation, and edge cases. A headless Streamlit startup should also be checked before a presentation or deployment.
 
-## Deployment preparation
+## Presentation outline
 
-The app is suitable for Streamlit Community Cloud once a reproducible model strategy is chosen. For a U-Net deployment, either commit a small approved `.keras` artifact or download it from a versioned model release during startup; do not commit the ISIC dataset. Validate dependency versions, cold-start time, model loading, uploads, and image rendering in the target environment before publishing a URL.
+Use this sequence for a five-minute explanation:
 
-## Limitations and disclaimer
+1. State the problem: convert a dermoscopic image into a lesion mask.
+2. Explain the common preprocessing representation and why segmentation is needed before measurements.
+3. Compare a transparent baseline (Otsu), an unsupervised colour baseline (K-means), and a learned model (U-Net).
+4. Show that all methods are evaluated on the same deterministic test set using Dice and IoU.
+5. Demonstrate the Streamlit upload flow and the four visual outputs.
+6. Explain that A/B/C/D values are descriptive image features, not a medical assessment.
+7. Discuss failure cases, dataset size, and why the measured best method is selected rather than assumed.
 
-- Classical segmentation is sensitive to illumination, hairs, rulers, and acquisition artifacts.
-- The U-Net requires actual training data and a saved checkpoint; this repository does not include the full ISIC dataset or an unverified large binary model.
-- Pixel diameter is not a physical lesion measurement.
-- The ABCD-style values are image descriptors, not medical assessments.
+## Documentation map
 
-**This application is an educational image-analysis project and is not intended for medical diagnosis or clinical decision-making.**
+- `ARCHITECTURE.md` — implementation and data-flow design.
+- `PRODUCT.md` — users, goals, workflows, and scope.
+- `AGENT.md` — development and handoff rules.
+- `ADR-001.md` — key architecture and dataset decisions.
+- `VALIDATION.md` — evidence-backed validation status.
 
+## Limitations
+
+Segmentation quality can degrade with unusual illumination, occlusion, hair, rulers, low contrast, border-touching lesions, or images outside the training distribution. The official small dataset is useful for a reproducible educational project but is not a universal clinical validation set. No public deployment should be described as clinically validated.

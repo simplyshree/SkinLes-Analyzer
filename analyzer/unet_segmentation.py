@@ -33,6 +33,8 @@ def dice_bce_loss(y_true, y_pred):
 
 def build_unet(input_shape: tuple[int, int, int] = (256, 256, 3)):
     tf = _tensorflow()
+    if len(input_shape) != 3 or input_shape[0] % 8 or input_shape[1] % 8 or input_shape[2] != 3:
+        raise ValueError("U-Net input_shape must be (height, width, 3) with dimensions divisible by 8")
     layers = tf.keras.layers
 
     def block(x, filters):
@@ -75,11 +77,20 @@ def compile_unet(model, learning_rate: float = 1e-4):
 
 def load_unet_model(model_path: str | Path):
     tf = _tensorflow()
-    return tf.keras.models.load_model(model_path, custom_objects={"dice_bce_loss": dice_bce_loss, "dice_metric": dice_metric})
+    path = Path(model_path)
+    if not path.exists() or not path.is_file():
+        raise FileNotFoundError(f"U-Net model file was not found: {path}")
+    return tf.keras.models.load_model(path, custom_objects={"dice_bce_loss": dice_bce_loss, "dice_metric": dice_metric})
 
 
 def predict_unet(model, image: np.ndarray, threshold: float = 0.5) -> np.ndarray:
+    if model is None:
+        raise ValueError("A loaded U-Net model is required for U-Net prediction")
+    if not 0 < threshold < 1:
+        raise ValueError("threshold must be between 0 and 1")
     rgb = np.asarray(image).astype(np.float32) / 255.0
+    if rgb.ndim != 3 or rgb.shape[2] != 3:
+        raise ValueError("U-Net prediction expects an RGB image shaped HxWx3")
     prediction = model.predict(rgb[None, ...], verbose=0)[0, ..., 0]
     return (prediction >= threshold).astype(np.uint8)
 

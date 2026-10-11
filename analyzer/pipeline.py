@@ -11,6 +11,7 @@ from .abcd_features import extract_abcd_features
 from .classical_segmentation import kmeans_segmentation, otsu_segmentation
 from .preprocessing import ensure_rgb, preprocess_image
 from .visualization import contour_overlay, overlay_mask
+from .reporting import PIPELINE_VERSION
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class AnalysisConfig:
     remove_hair: bool = False
     use_clahe: bool = False
     benchmark_path: str = "results/benchmark_results.csv"
+    model_path: str | None = None
 
 
 def _resolve_path(path: str | Path) -> Path:
@@ -100,6 +102,20 @@ def analyze_lesion(
             "Contour extraction",
             "ABCD-style image feature extraction",
         ],
+        "metadata": {
+            "pipeline_version": PIPELINE_VERSION,
+            "input_shape": list(original.shape),
+            "target_shape": list(prepared["processed"].shape),
+            "requested_method": method or "measured_best",
+            "selected_method": selected,
+            "preprocessing": {
+                "remove_hair": cfg.remove_hair,
+                "use_clahe": cfg.use_clahe,
+                "target_size": list(cfg.target_size),
+            },
+            "benchmark_path": str(cfg.benchmark_path),
+            "model_path": cfg.model_path,
+        },
     }
     result.update(abcd)
     result["abcd"] = abcd

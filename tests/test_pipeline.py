@@ -18,6 +18,13 @@ def test_pipeline_rejects_invalid_image():
         analyze_lesion(np.zeros((4, 4, 2), dtype=np.uint8), method="otsu")
 
 
+def test_pipeline_falls_back_when_unet_model_is_missing():
+    image = np.full((32, 32, 3), 120, dtype=np.uint8)
+    result = analyze_lesion(image, method="u-net", model=None)
+    assert result["selected_method"] == "otsu_fallback"
+    assert result["warning"]
+
+
 def test_synthetic_smoke_results_do_not_select_a_production_method(tmp_path):
     path = tmp_path / "smoke.csv"
     path.write_text("dataset,method,mean_dice,mean_iou\nsynthetic_smoke_fixture,K-means + Morphology,0.99,0.99\n", encoding="utf-8")

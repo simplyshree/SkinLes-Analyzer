@@ -20,4 +20,6 @@ results/figures/*.png
 results/figures/*.jpg
 results/figures/*.jpeg
 logs/
+.training_tmp/
+*.part
 

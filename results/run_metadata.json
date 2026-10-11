@@ -1,0 +1,44 @@
+{
+  "benchmark_csv": "results\\benchmark_results.csv",
+  "figures_dir": "results\\figures",
+  "methods": [
+    "Otsu",
+    "K-means + Morphology",
+    "U-Net"
+  ],
+  "model_path": "model\\unet_skin_lesion.keras",
+  "per_sample_csv": "results\\benchmark_results_per_sample.csv",
+  "pipeline_version": "1.1.0",
+  "requested_samples": "all",
+  "run_timestamp_utc": "2026-10-10T07:07:10.024308+00:00",
+  "seed": 42,
+  "selected_best_method": "Otsu",
+  "selected_pairs": 900,
+  "source": {
+    "archive": "isic2016_training_masks.zip",
+    "archive_bytes": 6000606,
+    "archive_sha256": "81cff572b1cc0e6198ddddc1c8e14ea13dc9b10bfa316ee1877a4b183ddd876a",
+    "archives": {
+      "isic2016_training_images.zip": {
+        "bytes": 631625308,
+        "extract_dir": "dataset_cache\\isic2016_training_images",
+        "sha256": "ad5b48fb7d9073f901d7ea353cc965360c003eabbce1c1f9cdd1c3c42bd90ba2",
+        "url": "https://isic-archive.s3.amazonaws.com/challenges/2016/ISBI2016_ISIC_Part1_Training_Data.zip"
+      },
+      "isic2016_training_masks.zip": {
+        "bytes": 6000606,
+        "extract_dir": "dataset_cache\\isic2016_training_masks",
+        "sha256": "81cff572b1cc0e6198ddddc1c8e14ea13dc9b10bfa316ee1877a4b183ddd876a",
+        "url": "https://isic-archive.s3.amazonaws.com/challenges/2016/ISBI2016_ISIC_Part1_Training_GroundTruth.zip"
+      }
+    },
+    "cache_version": 1,
+    "dataset": "ISIC2016_Task1",
+    "n_pairs": 900,
+    "source": "official_isic",
+    "split": "training"
+  },
+  "test_pairs": 180,
+  "train_pairs": 540,
+  "validation_pairs": 180
+}
