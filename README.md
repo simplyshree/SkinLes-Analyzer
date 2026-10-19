@@ -2,6 +2,12 @@
 
 An educational image-processing system for segmenting dermoscopic skin-lesion images and extracting mask-based visual descriptors. The project compares classical computer-vision methods with a compact U-Net and exposes the result through a presentation-ready Streamlit application.
 
+```text
+cd "C:\Users\Sgoff\MYfile\Desktop\PYThh\Skin - Les Analyzer"
+.\.venv\Scripts\Activate.ps1
+streamlit run app.py
+```
+
 > This project is not a medical device. It does not diagnose skin disease, estimate cancer risk, or replace clinical review.
 
 ## What the project demonstrates
