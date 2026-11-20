@@ -162,7 +162,6 @@ with st.sidebar:
     method_label = st.selectbox("Segmentation method", ["Use measured best", "Otsu thresholding", "K-means + morphology", "U-Net checkpoint"])
     remove_hair = st.checkbox("Remove hair-like artifacts", value=False)
     use_clahe = st.checkbox("Enhance local contrast (CLAHE)", value=False)
-    st.caption("Training is intentionally offline. The app only performs inference on uploaded images.")
 
 benchmark, benchmark_status = read_benchmark(benchmark_text)
 model_path = _resolve_repo_path(model_text)
