@@ -1,17 +1,19 @@
 # Skin Lesion Analyzer
 
-Image-only educational project for lesion segmentation and descriptive ABCD-style image features.
+An educational image-processing system for segmenting dermoscopic skin-lesion images and extracting mask-based visual descriptors. The project compares classical computer-vision methods with a compact U-Net and exposes the result through a presentation-ready Streamlit application.
 
-## Run the local frontend
+> This project is not a medical device. It does not diagnose skin disease, estimate cancer risk, or replace clinical review.
 
-1. Install Python 3.11 or newer from https://www.python.org/downloads/.
-2. Double-click `run_app.bat`.
-3. Open http://localhost:8501.
+## What the project demonstrates
 
-The launcher creates `.venv`, installs the lightweight frontend dependencies,
-and starts Streamlit. It uses the trained checkpoint at
-`model/unet_skin_lesion.keras` when available and otherwise uses the classical
-segmentation methods.
+- Image standardisation, colour-space conversion, contrast enhancement, and optional hair-artifact removal.
+- Classical segmentation with Otsu thresholding and K-means clustering.
+- Morphological opening, closing, hole filling, polarity selection, and connected-component filtering.
+- A compact U-Net trained offline on expert masks.
+- Reproducible train/validation/test splitting and held-out evaluation.
+- Dice and IoU comparison with mean, standard deviation, median, and per-sample metrics.
+- ABCD-style image descriptors derived from the predicted mask.
+- A Streamlit frontend for interactive inference and presentation.
 
 ## Project contents
 
